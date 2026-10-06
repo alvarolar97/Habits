@@ -38,6 +38,8 @@ input[type=text],input[type=date]{font:inherit;font-family:inherit;color:var(--i
 .btn.sec{background:transparent;color:var(--ink);border:1px solid var(--line)}
 .btn.del{background:transparent;color:var(--no);border:1px solid var(--line)}
 .btn.del.ask{background:var(--no);color:var(--on);border-color:var(--no)}
+.btn.mv{padding:11px 12px;min-width:44px}
+.btn:disabled{opacity:.35;cursor:default}
 .btn.big{width:100%;padding:15px;font-size:1.1rem;margin-top:16px}
 .tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:14px}
 .tools label{color:var(--mut);display:flex;gap:8px;align-items:center}
@@ -121,16 +123,18 @@ function renderHoy(){
   h+='<div class="panel"><div class="pct"><span>'+done+' de '+hs.length+' cumplidos</span><b>'+p+'%</b></div><div class="bar"><i style="width:'+p+'%"></i></div>';
   if(!hs.length)h+='<p class="empty">Aún no tienes hábitos. Pulsa «Editar hábitos» para añadir el primero.</p>';
   h+='<ul class="list">';
-  hs.forEach(function(x){
+  hs.forEach(function(x,i){
     if(edit){
       h+='<li class="erow"><input type="text" class="rn" data-id="'+x.id+'" value="'+esc(x.name)+'" maxlength="60" aria-label="Nombre del hábito">'+
+         '<button class="btn sec mv" data-act="up" data-id="'+x.id+'" aria-label="Subir"'+(i===0?' disabled':'')+'>▲</button>'+
+         '<button class="btn sec mv" data-act="down" data-id="'+x.id+'" aria-label="Bajar"'+(i===hs.length-1?' disabled':'')+'>▼</button>'+
          '<button class="btn del'+(confirmId===x.id?' ask':'')+'" data-act="del" data-id="'+x.id+'">'+(confirmId===x.id?'¿Seguro?':'Quitar')+'</button></li>';
     }else{
       h+='<li><button class="row" data-act="toggle" data-id="'+x.id+'" aria-pressed="'+(!!m[x.id])+'"><span class="chk">'+(m[x.id]?'✓':'')+'</span><span class="txt">'+esc(x.name)+'</span></button></li>';
     }
   });
   h+='</ul>';
-  if(edit)h+='<div class="erow" style="margin-top:12px"><input type="text" id="nh" maxlength="60" placeholder="Nuevo hábito" aria-label="Nuevo hábito"><button class="btn" data-act="add">Añadir</button></div>';
+  if(edit)h+='<div class="erow" style="margin-top:12px"><input type="text" id="nh" maxlength="60" placeholder="Nuevo hábito" aria-label="Nuevo hábito"><button class="btn" data-act="add">Añadir</button></div><p class="note">Usa ▲ y ▼ para colocar cada hábito en la posición que quieras.</p>';
   h+='</div>';
   if(!edit&&hs.length)h+='<button class="btn big" data-act="close">'+(closed?'Actualizar día':'Cerrar el día')+'</button><p class="note">Lo que no marques cuenta como no cumplido.</p>';
   h+='<div style="margin-top:14px"><button class="btn sec" data-act="edit">'+(edit?'Listo':'Editar hábitos')+'</button></div>';
@@ -184,6 +188,10 @@ document.addEventListener('click',function(ev){
   else if(a==='del'){
     if(confirmId===id){S.habits=S.habits.filter(function(x){return x.id!==id});confirmId=null;save();render()}
     else{confirmId=id;render()}
+  }
+  else if(a==='up'||a==='down'){
+    var i=S.habits.findIndex(function(x){return x.id===id}),j=a==='up'?i-1:i+1;
+    if(i>-1&&j>=0&&j<S.habits.length){var t=S.habits[i];S.habits[i]=S.habits[j];S.habits[j]=t;save();render()}
   }
   else if(a==='now'){date=today();render()}
   else if(a==='open'){date=b.dataset.date;view='hoy';edit=false;render();window.scrollTo(0,0)}
