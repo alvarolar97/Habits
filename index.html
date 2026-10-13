@@ -65,6 +65,7 @@ td.p{font-weight:600}
 .trow{display:flex;gap:8px;align-items:stretch}
 .trow .row{flex:1;width:auto;min-width:0}
 .btn.x{padding:0 14px}
+.dn{display:flex;gap:6px;align-items:center}
 .mlab{font-weight:600;color:var(--mut);margin-bottom:6px}
 .mchk{min-width:50px;min-height:46px;font-size:1.2rem}
 .mchk[aria-pressed="true"]{background:var(--ac);border-color:var(--ac);color:var(--on)}
@@ -172,11 +173,11 @@ function renderReg(){
 }
 
 function dateBar(b,ok){
-  return '<div class="tools"><label>Día <input type="date" id="dt" max="'+today()+'" value="'+date+'"></label>'+(date!==today()?'<button class="btn sec" data-act="now">Volver a hoy</button>':'')+'<span class="badge'+(ok?' ok':'')+'">'+b+'</span></div>';
+  return '<div class="tools"><div class="dn"><button class="btn sec mv" data-act="prev" aria-label="Día anterior">‹</button><label>Día <input type="date" id="dt" value="'+date+'"></label><button class="btn sec mv" data-act="next" aria-label="Día siguiente">›</button></div>'+(date!==today()?'<button class="btn sec" data-act="now">Volver a hoy</button>':'')+'<span class="badge'+(ok?' ok':'')+'">'+b+'</span></div>';
 }
 function renderTar(){
   var ts=S.tasks[date]||[],done=ts.filter(function(t){return t.done}).length,p=ts.length?Math.round(100*done/ts.length):0;
-  var h=dateBar(ts.length?done+'/'+ts.length:'Sin tareas',ts.length>0&&done===ts.length);
+  var h=dateBar(date>today()?(ts.length?'Planificado':'Sin tareas'):(ts.length?done+'/'+ts.length:'Sin tareas'),date<=today()&&ts.length>0&&done===ts.length);
   h+='<div class="panel"><div class="pct"><span>'+done+' de '+ts.length+' completadas</span><b>'+p+'%</b></div><div class="bar"><i style="width:'+p+'%"></i></div>';
   if(!ts.length)h+='<p class="empty">No hay tareas para este día. Añade la primera abajo.</p>';
   h+='<ul class="list">';
@@ -191,13 +192,13 @@ function meal(k){return(S.meals[date]&&S.meals[date][k])||{text:'',done:false}}
 function mealRef(k){S.meals[date]=S.meals[date]||{};return S.meals[date][k]||(S.meals[date][k]={text:'',done:false})}
 function renderAli(){
   var n=SLOTS.filter(function(s){return meal(s[0]).done}).length,p=Math.round(100*n/3);
-  var h=dateBar(n+'/3 hechas',n===3);
+  var h=dateBar(date>today()?'Planificado':n+'/3 hechas',date<=today()&&n===3);
   h+='<div class="panel"><div class="pct"><span>'+n+' de 3 comidas hechas</span><b>'+p+'%</b></div><div class="bar"><i style="width:'+p+'%"></i></div><ul class="list">';
   SLOTS.forEach(function(s){
     var m=meal(s[0]);
     h+='<li><div class="mlab">'+s[1]+'</div><div class="erow"><input type="text" class="ml" data-k="'+s[0]+'" maxlength="120" value="'+esc(m.text)+'" placeholder="Ej.: '+esc(s[2])+'" aria-label="'+s[1]+'"><button class="btn sec mchk" data-act="mtoggle" data-k="'+s[0]+'" aria-pressed="'+m.done+'" aria-label="Marcar '+s[1]+' como hecha">'+(m.done?'✓':'')+'</button></div></li>';
   });
-  return h+'</ul></div><p class="note">Escribe lo que vas a comer y márcalo cuando lo hayas hecho.</p>';
+  return h+'</ul></div><p class="note">Escribe lo que vas a comer y márcalo cuando lo hayas hecho. Para planificar, elige un día futuro con las flechas o el calendario: cuando llegue, verás aquí lo previsto.</p>';
 }
 function addTask(){
   var i=document.getElementById('nt'),n=i.value.trim();
@@ -221,7 +222,7 @@ function addHabit(){
 document.addEventListener('click',function(ev){
   var b=ev.target.closest('[data-act]');if(!b)return;
   var a=b.dataset.act,id=b.dataset.id;
-  if(a==='tab'){view=b.dataset.v;if(view==='hoy')date=date;render()}
+  if(a==='tab'){view=b.dataset.v;if(view==='hoy'&&date>today())date=today();render()}
   else if(a==='toggle'){var m=marks(date);m[id]=!m[id];S.drafts[date]=m;save();render()}
   else if(a==='close'){
     var mm=marks(date),e={};S.habits.forEach(function(x){e[x.id]=!!mm[x.id]});
@@ -237,6 +238,7 @@ document.addEventListener('click',function(ev){
     var i=S.habits.findIndex(function(x){return x.id===id}),j=a==='up'?i-1:i+1;
     if(i>-1&&j>=0&&j<S.habits.length){var t=S.habits[i];S.habits[i]=S.habits[j];S.habits[j]=t;save();render()}
   }
+  else if(a==='prev'||a==='next'){date=addDays(date,a==='prev'?-1:1);render()}
   else if(a==='tadd'){addTask()}
   else if(a==='ttoggle'){
     var tk=(S.tasks[date]||[]).filter(function(x){return x.id===id})[0];
@@ -252,7 +254,7 @@ document.addEventListener('click',function(ev){
 });
 document.addEventListener('change',function(ev){
   var t=ev.target;
-  if(t.id==='dt'&&t.value){date=t.value>today()?today():t.value;render()}
+  if(t.id==='dt'&&t.value){date=(view==='hoy'&&t.value>today())?today():t.value;render()}
   else if(t.classList.contains('rn')){
     var n=t.value.trim(),h=S.habits.filter(function(x){return x.id===t.dataset.id})[0];
     if(h&&n){h.name=n;save()}else if(h){t.value=h.name}
