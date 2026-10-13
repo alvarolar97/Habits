@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Registro de hábitos</title>
+<title>Mi día</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap">
 <style>
 :root{--bg:#EDF1EE;--sf:#fff;--ink:#10282A;--mut:#5C7270;--line:#D5DEDA;--ac:#1B7F5F;--acs:#DDF0E8;--on:#fff;--no:#C2410C;--nos:#FBE6DC;
@@ -16,8 +16,8 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:'Bricolage Grote
 main{max-width:720px;margin:0 auto;padding:20px 16px 48px}
 h1{font-size:2.4rem;font-weight:800;letter-spacing:-.03em;margin:8px 0 0;line-height:1}
 .date{color:var(--mut);margin:6px 0 18px;text-transform:capitalize}
-.tabs{display:flex;gap:4px;background:var(--line);padding:4px;border-radius:12px;margin-bottom:18px}
-.tabs button{flex:1;border:0;background:transparent;color:var(--mut);font-weight:600;font-size:1rem;font-family:inherit;padding:10px;border-radius:9px;cursor:pointer}
+.tabs{display:flex;gap:4px;overflow-x:auto;background:var(--line);padding:4px;border-radius:12px;margin-bottom:18px}
+.tabs button{flex:1 0 auto;white-space:nowrap;border:0;background:transparent;color:var(--mut);font-weight:600;font-size:.9rem;font-family:inherit;padding:10px 8px;border-radius:9px;cursor:pointer}
 .tabs button.on{background:var(--sf);color:var(--ink)}
 button:focus-visible,input:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
 .panel{background:var(--sf);border:1px solid var(--line);border-radius:14px;padding:16px}
@@ -60,6 +60,14 @@ td button{border:0;background:transparent;font:inherit;cursor:pointer;padding:2p
 td.d button{color:var(--ink);font-weight:600;padding:2px 0;text-align:left;text-transform:capitalize}
 td.p{font-weight:600}
 .note{color:var(--mut);font-size:.85rem;margin:10px 2px 0}
+.erow .btn{flex:none}
+.row .txt{overflow-wrap:anywhere}
+.trow{display:flex;gap:8px;align-items:stretch}
+.trow .row{flex:1;width:auto;min-width:0}
+.btn.x{padding:0 14px}
+.mlab{font-weight:600;color:var(--mut);margin-bottom:6px}
+.mchk{min-width:50px;min-height:46px;font-size:1.2rem}
+.mchk[aria-pressed="true"]{background:var(--ac);border-color:var(--ac);color:var(--on)}
 #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:99px;opacity:0;pointer-events:none;transition:opacity .2s}
 #toast.show{opacity:1}
 @media (prefers-reduced-motion:reduce){.bar i,#toast{transition:none}}
@@ -67,11 +75,13 @@ td.p{font-weight:600}
 </head>
 <body>
 <main>
-  <h1>Hábitos</h1>
+  <h1>Mi día</h1>
   <p class="date" id="hdr"></p>
   <div class="tabs" role="tablist">
-    <button role="tab" data-act="tab" data-v="hoy" id="t-hoy">Hoy</button>
+    <button role="tab" data-act="tab" data-v="hoy" id="t-hoy">Hábitos</button>
     <button role="tab" data-act="tab" data-v="reg" id="t-reg">Registro</button>
+    <button role="tab" data-act="tab" data-v="tar" id="t-tar">Tareas</button>
+    <button role="tab" data-act="tab" data-v="ali" id="t-ali">Alimentación</button>
   </div>
   <div id="app"></div>
 </main>
@@ -90,8 +100,8 @@ function longDate(s){return parse(s).toLocaleDateString('es-ES',{weekday:'long',
 function shortDate(s){return parse(s).toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'})}
 
 function load(){
-  try{var r=localStorage.getItem(KEY);if(r){var o=JSON.parse(r);if(o&&Array.isArray(o.habits)){o.log=o.log||{};o.drafts=o.drafts||{};return o}}}catch(e){}
-  return{habits:['Beber 2 L de agua','Entrenar','Estudiar 1 hora','Dormir 8 horas','Leer 15 minutos'].map(function(n){return{id:uid(),name:n}}),log:{},drafts:{}};
+  try{var r=localStorage.getItem(KEY);if(r){var o=JSON.parse(r);if(o&&Array.isArray(o.habits)){o.log=o.log||{};o.drafts=o.drafts||{};o.tasks=o.tasks||{};o.meals=o.meals||{};return o}}}catch(e){}
+  return{habits:['Beber 2 L de agua','Entrenar','Estudiar 1 hora','Dormir 8 horas','Leer 15 minutos'].map(function(n){return{id:uid(),name:n}}),log:{},drafts:{},tasks:{},meals:{}};
 }
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 var S=load(),view='hoy',date=today(),edit=false,confirmId=null;
@@ -144,7 +154,7 @@ function renderHoy(){
 function renderReg(){
   var st=stats(),keys=Object.keys(S.log).sort().reverse(),h='';
   h+='<div class="stats"><div class="stat"><b>'+st.cur+'</b><span>Racha actual (días)</span></div><div class="stat"><b>'+st.best+'</b><span>Mejor racha</span></div><div class="stat"><b>'+(st.pct===null?'–':st.pct+'%')+'</b><span>Cumplimiento total</span></div></div>';
-  if(!keys.length)return h+'<div class="panel"><p class="empty">Todavía no has cerrado ningún día. Ve a «Hoy», marca tus hábitos y pulsa «Cerrar el día».</p></div>';
+  if(!keys.length)return h+'<div class="panel"><p class="empty">Todavía no has cerrado ningún día. Ve a «Hábitos», marca tus hábitos y pulsa «Cerrar el día».</p></div>';
   h+='<div class="wrap"><table><thead><tr><th>Día</th>';
   S.habits.forEach(function(x){h+='<th>'+esc(x.name)+'</th>'});
   h+='<th>%</th></tr></thead><tbody>';
@@ -157,14 +167,48 @@ function renderReg(){
     });
     h+='<td class="p">'+(s.a?Math.round(100*s.c/s.a)+'%':'–')+'</td></tr>';
   });
-  h+='</tbody></table></div><p class="note">Toca una casilla para corregirla, o un día para abrirlo en «Hoy».</p>';
+  h+='</tbody></table></div><p class="note">Toca una casilla para corregirla, o un día para abrirlo en «Hábitos».</p>';
   return h;
 }
 
+function dateBar(b,ok){
+  return '<div class="tools"><label>Día <input type="date" id="dt" max="'+today()+'" value="'+date+'"></label>'+(date!==today()?'<button class="btn sec" data-act="now">Volver a hoy</button>':'')+'<span class="badge'+(ok?' ok':'')+'">'+b+'</span></div>';
+}
+function renderTar(){
+  var ts=S.tasks[date]||[],done=ts.filter(function(t){return t.done}).length,p=ts.length?Math.round(100*done/ts.length):0;
+  var h=dateBar(ts.length?done+'/'+ts.length:'Sin tareas',ts.length>0&&done===ts.length);
+  h+='<div class="panel"><div class="pct"><span>'+done+' de '+ts.length+' completadas</span><b>'+p+'%</b></div><div class="bar"><i style="width:'+p+'%"></i></div>';
+  if(!ts.length)h+='<p class="empty">No hay tareas para este día. Añade la primera abajo.</p>';
+  h+='<ul class="list">';
+  ts.forEach(function(t){
+    h+='<li class="trow"><button class="row" data-act="ttoggle" data-id="'+t.id+'" aria-pressed="'+t.done+'"><span class="chk">'+(t.done?'✓':'')+'</span><span class="txt">'+esc(t.text)+'</span></button><button class="btn del x" data-act="tdel" data-id="'+t.id+'" aria-label="Quitar tarea">✕</button></li>';
+  });
+  h+='</ul><div class="erow" style="margin-top:12px"><input type="text" id="nt" maxlength="120" placeholder="Nueva tarea" aria-label="Nueva tarea"><button class="btn" data-act="tadd">Añadir</button></div></div>';
+  return h;
+}
+var SLOTS=[['desayuno','Desayuno','2 tostadas con aguacate y huevo'],['comida','Comida','Alubias + arroz + fruta'],['cena','Cena','Salmón + verduras + patata']];
+function meal(k){return(S.meals[date]&&S.meals[date][k])||{text:'',done:false}}
+function mealRef(k){S.meals[date]=S.meals[date]||{};return S.meals[date][k]||(S.meals[date][k]={text:'',done:false})}
+function renderAli(){
+  var n=SLOTS.filter(function(s){return meal(s[0]).done}).length,p=Math.round(100*n/3);
+  var h=dateBar(n+'/3 hechas',n===3);
+  h+='<div class="panel"><div class="pct"><span>'+n+' de 3 comidas hechas</span><b>'+p+'%</b></div><div class="bar"><i style="width:'+p+'%"></i></div><ul class="list">';
+  SLOTS.forEach(function(s){
+    var m=meal(s[0]);
+    h+='<li><div class="mlab">'+s[1]+'</div><div class="erow"><input type="text" class="ml" data-k="'+s[0]+'" maxlength="120" value="'+esc(m.text)+'" placeholder="Ej.: '+esc(s[2])+'" aria-label="'+s[1]+'"><button class="btn sec mchk" data-act="mtoggle" data-k="'+s[0]+'" aria-pressed="'+m.done+'" aria-label="Marcar '+s[1]+' como hecha">'+(m.done?'✓':'')+'</button></div></li>';
+  });
+  return h+'</ul></div><p class="note">Escribe lo que vas a comer y márcalo cuando lo hayas hecho.</p>';
+}
+function addTask(){
+  var i=document.getElementById('nt'),n=i.value.trim();
+  if(!n){i.focus();return}
+  (S.tasks[date]=S.tasks[date]||[]).push({id:uid(),text:n,done:false});save();render();
+  var f=document.getElementById('nt');if(f)f.focus();
+}
 function render(){
   document.getElementById('hdr').textContent=longDate(date);
-  ['hoy','reg'].forEach(function(v){var b=document.getElementById('t-'+v);b.classList.toggle('on',view===v);b.setAttribute('aria-selected',view===v)});
-  document.getElementById('app').innerHTML=view==='hoy'?renderHoy():renderReg();
+  ['hoy','reg','tar','ali'].forEach(function(v){var b=document.getElementById('t-'+v);b.classList.toggle('on',view===v);b.setAttribute('aria-selected',view===v)});
+  document.getElementById('app').innerHTML=view==='hoy'?renderHoy():view==='reg'?renderReg():view==='tar'?renderTar():renderAli();
 }
 
 function addHabit(){
@@ -193,6 +237,13 @@ document.addEventListener('click',function(ev){
     var i=S.habits.findIndex(function(x){return x.id===id}),j=a==='up'?i-1:i+1;
     if(i>-1&&j>=0&&j<S.habits.length){var t=S.habits[i];S.habits[i]=S.habits[j];S.habits[j]=t;save();render()}
   }
+  else if(a==='tadd'){addTask()}
+  else if(a==='ttoggle'){
+    var tk=(S.tasks[date]||[]).filter(function(x){return x.id===id})[0];
+    if(tk){tk.done=!tk.done;save();render()}
+  }
+  else if(a==='tdel'){S.tasks[date]=(S.tasks[date]||[]).filter(function(x){return x.id!==id});save();render()}
+  else if(a==='mtoggle'){var mr=mealRef(b.dataset.k);mr.done=!mr.done;save();render()}
   else if(a==='now'){date=today();render()}
   else if(a==='open'){date=b.dataset.date;view='hoy';edit=false;render();window.scrollTo(0,0)}
   else if(a==='cell'){
@@ -209,6 +260,11 @@ document.addEventListener('change',function(ev){
 });
 document.addEventListener('keydown',function(ev){
   if(ev.key==='Enter'&&ev.target.id==='nh'){ev.preventDefault();addHabit()}
+  else if(ev.key==='Enter'&&ev.target.id==='nt'){ev.preventDefault();addTask()}
+});
+document.addEventListener('input',function(ev){
+  var t=ev.target;
+  if(t.classList&&t.classList.contains('ml')){mealRef(t.dataset.k).text=t.value;save()}
 });
 render();
 })();
